@@ -62,7 +62,7 @@
 //!
 //! You can register custom functions with a JMESPath expression by using
 //! a custom `Runtime`. When you call `jmespath::compile`, you are using a
-//! shared `Runtime` instance that is created lazily using `lazy_static`.
+//! shared `Runtime` instance that is created lazily using `once_cell::sync::Lazy`.
 //! This shared `Runtime` utilizes all of the builtin JMESPath functions
 //! by default. However, custom functions may be utilized by creating a custom
 //! `Runtime` and compiling expressions directly from the `Runtime`.
@@ -109,7 +109,7 @@ use serde_json::Value;
 use std::convert::TryInto;
 use std::fmt;
 
-use lazy_static::*;
+use once_cell::sync::Lazy;
 
 use crate::ast::Ast;
 use crate::interpreter::{interpret, SearchResult};
@@ -121,13 +121,12 @@ mod parser;
 mod runtime;
 mod variable;
 
-lazy_static! {
-    pub static ref DEFAULT_RUNTIME: Runtime = {
-        let mut runtime = Runtime::new();
-        runtime.register_builtin_functions();
-        runtime
-    };
-}
+
+static DEFAULT_RUNTIME: Lazy<Runtime> = Lazy::new(|| {
+    let mut runtime = Runtime::new();
+    runtime.register_builtin_functions();
+    runtime
+});
 
 /// `Rc` reference counted JMESPath `Variable`.
 #[cfg(not(feature = "sync"))]
@@ -139,7 +138,7 @@ pub type Rcvar = std::sync::Arc<Variable>;
 /// Compiles a JMESPath expression using the default Runtime.
 ///
 /// The default Runtime is created lazily the first time it is dereferenced
-/// by using the `lazy_static` macro.
+/// by using the `once_cell::sync::Lazy` .
 ///
 /// The provided expression is expected to adhere to the JMESPath
 /// grammar: <https://jmespath.org/specification.html>
